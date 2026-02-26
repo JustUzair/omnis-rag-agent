@@ -1,7 +1,9 @@
+import { RunnableLambda } from "@langchain/core/runnables";
 import { AgentMode } from "./types";
+import { SearchInputSchema } from "../utils/schema";
 
-export function routeStrategy(q: string): AgentMode {
-  const trimmedQuery = q.toLowerCase().trim();
+export function routeStrategy(query: string): AgentMode {
+  const trimmedQuery = query.toLowerCase().trim();
   const isQueryLongEnough = trimmedQuery.length > 50;
   const recentYearRegex = /\b20(2[4-9]|3[0-9])\b/.test(trimmedQuery);
 
@@ -56,3 +58,16 @@ export function routeStrategy(q: string): AgentMode {
   if (isQueryLongEnough || isQueryInPatterns || recentYearRegex) return "web";
   return "direct";
 }
+
+export const routeStep = RunnableLambda.from(
+  async (input: {
+    query: String;
+  }): Promise<{ query: string; mode: AgentMode }> => {
+    const { query } = SearchInputSchema.parse(input);
+    const mode = routeStrategy(query);
+    return {
+      query,
+      mode,
+    };
+  },
+);
