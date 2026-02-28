@@ -1,16 +1,10 @@
 {
   "version": 2,
   "buildCommand": "yarn build",
-  "builds": [
+  "rewrites": [
     {
-      "src": "dist/index.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "dist/index.js"
+      "source": "/(.*)",
+      "destination": "/dist/index.js"
     }
   ]
 }
