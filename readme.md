@@ -12,7 +12,7 @@
 **Intelligence + Web Synthesis Engine**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![Express](https://img.shields.io/badge/Express-4.x-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com/)
 [![LangChain](https://img.shields.io/badge/LangChain-LCEL-1C3C3C?style=flat-square&logo=chainlink&logoColor=white)](https://js.langchain.com/)
 [![Zod](https://img.shields.io/badge/Zod-4.x-3E67B1?style=flat-square)](https://zod.dev/)
@@ -208,7 +208,7 @@ omnis/
 
 | Layer              | Technology                        | Purpose                                     |
 | ------------------ | --------------------------------- | ------------------------------------------- |
-| Frontend Framework | Next.js 15                        | React app + API proxy routes                |
+| Frontend Framework | Next.js 16                        | React app + API proxy routes                |
 | UI Animations      | Framer Motion                     | Page transitions, 3D tilt, word reveals     |
 | Backend Framework  | Express.js                        | HTTP server, routing, middleware            |
 | AI Chain Framework | LangChain LCEL                    | Pipeline composition and branching          |
