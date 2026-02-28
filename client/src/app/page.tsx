@@ -18,15 +18,25 @@ import {
   Globe2,
   Newspaper,
 } from "lucide-react";
-import { API_URL } from "@/lib/config";
 import Link from "next/link";
+import Footer from "@/components/ui/footer";
+import { ChatTurn } from "@/lib/types";
+import Header from "@/components/ui/header";
 
-type ChatTurn = {
-  role: "user" | "assistant";
-  content: string;
-  sources?: string[];
-  mode?: "web" | "direct";
-  time?: number;
+// --- Updated Suggestion Logic ---
+const getDynamicQuery = (label: string) => {
+  const now = new Date();
+  const month = now.toLocaleString("default", { month: "long" });
+  const year = now.getFullYear();
+
+  const queries: Record<string, string> = {
+    "Quantum Computing": `Latest breakthroughs in Quantum Computing as of ${month} ${year}`,
+    "Global News": `Top 5 significant global news stories for ${month} ${year}`,
+    "Blockchain Trends": `State of blockchain technology and crypto regulations in ${year}`,
+    "AI Breakthroughs": `Most impactful AI research papers and model releases in ${month} ${year}`,
+    "Space Exploration": `Upcoming space missions and astronomical events scheduled for ${year}`,
+  };
+  return queries[label] || label;
 };
 
 const SUGGESTIONS = [
@@ -48,109 +58,7 @@ const SUGGESTIONS = [
     category: "SCIENCE",
   },
 ];
-
 const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ01#@!%";
-
-function ScrambleText({ text }: { text: string }) {
-  const [display, setDisplay] = useState(text);
-  useEffect(() => {
-    let iter = 0;
-    const iv = setInterval(() => {
-      setDisplay(
-        text
-          .split("")
-          .map((char, idx) => {
-            if (char === " ") return " ";
-            if (idx < iter) return text[idx];
-            return SCRAMBLE_CHARS[
-              Math.floor(Math.random() * SCRAMBLE_CHARS.length)
-            ];
-          })
-          .join(""),
-      );
-      if (iter >= text.length) clearInterval(iv);
-      iter += 0.6;
-    }, 28);
-    return () => clearInterval(iv);
-  }, [text]);
-  return <span>{display}</span>;
-}
-
-function RevealWords({
-  text,
-  className,
-}: {
-  text: string;
-  className?: string;
-}) {
-  return (
-    <span className={className}>
-      {text.split(" ").map((word, i) => (
-        <motion.span
-          key={i}
-          initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{
-            delay: i * 0.035,
-            duration: 0.45,
-            ease: [0.25, 0.46, 0.45, 0.94],
-          }}
-          style={{ display: "inline-block", marginRight: "0.28em" }}
-        >
-          {word}
-        </motion.span>
-      ))}
-    </span>
-  );
-}
-
-function TiltCard({
-  children,
-  onClick,
-  className,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  className?: string;
-}) {
-  const ref = useRef<HTMLButtonElement>(null);
-  const rawX = useMotionValue(0);
-  const rawY = useMotionValue(0);
-  const rotateX = useSpring(useTransform(rawY, [-0.5, 0.5], [10, -10]), {
-    stiffness: 260,
-    damping: 28,
-  });
-  const rotateY = useSpring(useTransform(rawX, [-0.5, 0.5], [-10, 10]), {
-    stiffness: 260,
-    damping: 28,
-  });
-
-  const onMove = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const rect = ref.current?.getBoundingClientRect();
-    if (!rect) return;
-    rawX.set((e.clientX - rect.left) / rect.width - 0.5);
-    rawY.set((e.clientY - rect.top) / rect.height - 0.5);
-  };
-
-  const onLeave = () => {
-    rawX.set(0);
-    rawY.set(0);
-  };
-
-  return (
-    <motion.button
-      ref={ref}
-      onClick={onClick}
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
-      style={{ rotateX, rotateY, transformPerspective: 800 }}
-      whileTap={{ scale: 0.97 }}
-      className={className}
-    >
-      {children}
-    </motion.button>
-  );
-}
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -162,57 +70,6 @@ export default function Home() {
   const onMouseMove = useCallback((e: React.MouseEvent) => {
     setMouse({ x: e.clientX, y: e.clientY });
   }, []);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [chat, loading]);
-
-  async function runSearch(prompt: string) {
-    setLoading(true);
-    setChat(prev => [...prev, { role: "user", content: prompt }]);
-    const t0 = performance.now();
-    try {
-      const res = await fetch(`${API_URL}/api/v1/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: prompt }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Search failed");
-      setChat(prev => [
-        ...prev,
-        {
-          role: "assistant",
-          content: data.answer,
-          sources: data.sources,
-          mode: data.mode,
-          time: Math.round(performance.now() - t0),
-        },
-      ]);
-    } catch (err: any) {
-      setChat(prev => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "System Fault. Request Terminated.",
-          sources: [],
-          time: 0,
-        },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!query.trim() || loading) return;
-    const p = query.trim();
-    setQuery("");
-    runSearch(p);
-  };
 
   return (
     <div
@@ -270,51 +127,7 @@ export default function Home() {
         }}
       />
 
-      {/* ══ HEADER ══ */}
-      <motion.header
-        initial={{ y: -70, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-        className="sticky top-0 z-50 flex items-center justify-between px-8 py-5 bg-[#040404]/80 backdrop-blur-2xl"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
-      >
-        <div className="flex items-center gap-4">
-          <motion.div
-            whileHover={{ rotate: 90, scale: 1.05 }}
-            transition={{ duration: 0.35, ease: "easeInOut" }}
-            className="flex h-9 w-9 items-center justify-center bg-orange-600 rounded-sm"
-            style={{
-              boxShadow:
-                "0 0 24px rgba(234,88,12,0.45), 0 0 80px rgba(234,88,12,0.1)",
-            }}
-          >
-            <Layers size={17} className="text-black" />
-          </motion.div>
-          <div>
-            <div
-              className="text-xl font-black tracking-[-0.06em] text-white leading-none"
-              style={{ textShadow: "0 0 40px rgba(251,146,60,0.18)" }}
-            >
-              OMNIS
-            </div>
-            <div className="text-[8px] uppercase tracking-[0.45em] text-orange-500/80 font-bold mt-0.5">
-              Search Agent
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <motion.div
-            animate={{ scale: [1, 1.4, 1], opacity: [1, 0.6, 1] }}
-            transition={{ duration: 2.4, repeat: Infinity }}
-            className="w-1.5 h-1.5 rounded-full bg-emerald-500"
-            style={{ boxShadow: "0 0 8px rgba(16,185,129,0.9)" }}
-          />
-          <span className="text-[10px] text-emerald-500/80 font-bold tracking-[0.3em] uppercase hidden md:block">
-            Operational
-          </span>
-        </div>
-      </motion.header>
+      <Header />
 
       {/* ══ MAIN ══ */}
       <main
@@ -382,7 +195,7 @@ export default function Home() {
                       duration: 0.9,
                       ease: [0.16, 1, 0.3, 1],
                     }}
-                    className="h-px bg-gradient-to-r from-orange-600 via-orange-400/60 to-transparent origin-left mt-3"
+                    className="h-px bg-linear-to-r from-orange-600 via-orange-400/60 to-transparent origin-left mt-3"
                     style={{ boxShadow: "0 0 12px rgba(251,146,60,0.5)" }}
                   />
 
@@ -414,7 +227,7 @@ export default function Home() {
                   {SUGGESTIONS.map((item, i) => (
                     <TiltCard
                       key={item.label}
-                      onClick={() => setQuery(item.label)}
+                      onClick={() => setQuery(getDynamicQuery(item.label))}
                       className="group relative flex flex-col items-start p-7 bg-[#040404] text-left overflow-hidden cursor-pointer"
                     >
                       {/* Hover shimmer */}
@@ -448,7 +261,7 @@ export default function Home() {
                           transition: "all 0.3s",
                         }}
                       >
-                        <span className="group-hover:[filter:drop-shadow(0_0_8px_rgba(251,146,60,0.5))] transition-all duration-300">
+                        <span className="group-hover:filter-[drop-shadow(0_0_8px_rgba(251,146,60,0.5))] transition-all duration-300">
                           {item.icon}
                         </span>
                       </motion.div>
@@ -481,7 +294,7 @@ export default function Home() {
                       <motion.div
                         animate={{ opacity: [1, 0, 1] }}
                         transition={{ duration: 0.9, repeat: Infinity }}
-                        className="w-[7px] h-[14px] bg-orange-600"
+                        className="w-[7px] h-3.5 bg-orange-600"
                         style={{ boxShadow: "0 0 12px rgba(234,88,12,0.7)" }}
                       />
                       <span className="text-[8px] text-zinc-700 uppercase tracking-[0.4em] font-bold">
@@ -669,88 +482,112 @@ export default function Home() {
           </AnimatePresence>
         </div>
       </main>
-
-      {/* ══ FOOTER / INPUT ══ */}
-      <motion.footer
-        initial={{ y: 90, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.35, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-30 bg-[#040404]/90 backdrop-blur-2xl p-6"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
-      >
-        <form onSubmit={handleSubmit} className="mx-auto max-w-4xl">
-          <div className="group relative">
-            {/* Animated glow border */}
-            <div
-              className="absolute -inset-[1px] opacity-0 group-focus-within:opacity-100 transition-opacity duration-700 pointer-events-none"
-              style={{
-                background:
-                  "linear-gradient(90deg, rgba(234,88,12,0.7), rgba(251,146,60,0.2), rgba(234,88,12,0.7))",
-                backgroundSize: "200% 100%",
-                animation: "shimmerBorder 2.5s ease infinite",
-              }}
-            />
-            <div
-              className="relative flex items-center bg-[#080808] group-focus-within:bg-[#0A0808]"
-              style={{
-                border: "1px solid rgba(255,255,255,0.06)",
-                transition: "background 0.3s",
-              }}
-            >
-              <span className="pl-5 text-sm font-black text-orange-700 group-focus-within:text-orange-500 transition-colors select-none">
-                {">"}_
-              </span>
-              <input
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="AWAITING QUERY..."
-                className="flex-1 bg-transparent text-white text-sm uppercase tracking-widest placeholder:text-zinc-800 outline-none h-14 px-4 disabled:cursor-not-allowed"
-                disabled={loading}
-                style={{ fontFamily: "inherit" }}
-              />
-              <motion.button
-                type="submit"
-                disabled={loading || query.trim().length < 2}
-                whileHover={{ backgroundColor: "rgb(249,115,22)" }}
-                whileTap={{ scale: 0.96 }}
-                className="flex items-center gap-2 h-14 px-8 bg-orange-600 text-black font-black text-[10px] uppercase tracking-[0.3em] disabled:opacity-20 transition-colors"
-                style={{ boxShadow: "0 0 32px rgba(234,88,12,0.28)" }}
-              >
-                {loading ? (
-                  <Loader2 size={13} className="animate-spin" />
-                ) : (
-                  <>
-                    Execute <Send size={12} />
-                  </>
-                )}
-              </motion.button>
-            </div>
-          </div>
-
-          <div className="mt-3 flex gap-6 text-[8px] font-bold tracking-[0.3em] uppercase text-zinc-800 px-1">
-            <span className="tabular-nums">
-              LAT: {chat[chat.length - 1]?.time ?? "—"}ms
-            </span>
-            <span>REF: 01.A</span>
-            <span>TURNS: {chat.filter(c => c.role === "user").length}</span>
-            <span className="ml-auto text-orange-950/70 italic normal-case tracking-normal">
-              Internal Knowledge + Web Synthesis
-            </span>
-          </div>
-        </form>
-      </motion.footer>
-
-      <style>{`
-        @keyframes shimmerBorder {
-          0%   { background-position: 0% 50%; }
-          50%  { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        ::-webkit-scrollbar { width: 2px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #f97316; border-radius: 2px; }
-        ::selection { background: rgba(234,88,12,0.28); }
-      `}</style>
+      <Footer
+        queryState={{ query, setQuery }}
+        chatState={{ chat, setChat }}
+        loadingState={{ loading, setLoading }}
+      />
     </div>
+  );
+}
+
+function ScrambleText({ text }: { text: string }) {
+  const [display, setDisplay] = useState(text);
+  useEffect(() => {
+    let iter = 0;
+    const iv = setInterval(() => {
+      setDisplay(
+        text
+          .split("")
+          .map((char, idx) => {
+            if (char === " ") return " ";
+            if (idx < iter) return text[idx];
+            return SCRAMBLE_CHARS[
+              Math.floor(Math.random() * SCRAMBLE_CHARS.length)
+            ];
+          })
+          .join(""),
+      );
+      if (iter >= text.length) clearInterval(iv);
+      iter += 0.6;
+    }, 28);
+    return () => clearInterval(iv);
+  }, [text]);
+  return <span>{display}</span>;
+}
+
+function RevealWords({
+  text,
+  className,
+}: {
+  text: string;
+  className?: string;
+}) {
+  return (
+    <span className={className}>
+      {text.split(" ").map((word, i) => (
+        <motion.span
+          key={i}
+          initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          transition={{
+            delay: i * 0.035,
+            duration: 0.45,
+            ease: [0.25, 0.46, 0.45, 0.94],
+          }}
+          style={{ display: "inline-block", marginRight: "0.28em" }}
+        >
+          {word}
+        </motion.span>
+      ))}
+    </span>
+  );
+}
+
+function TiltCard({
+  children,
+  onClick,
+  className,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  className?: string;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const rawX = useMotionValue(0);
+  const rawY = useMotionValue(0);
+  const rotateX = useSpring(useTransform(rawY, [-0.5, 0.5], [10, -10]), {
+    stiffness: 260,
+    damping: 28,
+  });
+  const rotateY = useSpring(useTransform(rawX, [-0.5, 0.5], [-10, 10]), {
+    stiffness: 260,
+    damping: 28,
+  });
+
+  const onMove = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    rawX.set((e.clientX - rect.left) / rect.width - 0.5);
+    rawY.set((e.clientY - rect.top) / rect.height - 0.5);
+  };
+
+  const onLeave = () => {
+    rawX.set(0);
+    rawY.set(0);
+  };
+
+  return (
+    <motion.button
+      ref={ref}
+      onClick={onClick}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      style={{ rotateX, rotateY, transformPerspective: 800 }}
+      whileTap={{ scale: 0.97 }}
+      className={className}
+    >
+      {children}
+    </motion.button>
   );
 }
