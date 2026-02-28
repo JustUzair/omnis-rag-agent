@@ -1,5 +1,5 @@
 import rateLimit from "express-rate-limit";
-import express, { Response } from "express";
+import express, { Request, Response } from "express";
 import LCELRouter from "./routes/search_lcel.js";
 import cors from "cors";
 import path from "path";
@@ -8,7 +8,7 @@ const limiter = rateLimit({
   limit: 10,
   windowMs: 10 * 60 * 1000, // 10 mins
   message: "Too many requests from this IP, please try again in an hour",
-  handler: (_, res: Response) => {
+  handler: (_: Request, res: Response) => {
     res.status(429).json({
       status: "fail",
       message: "Too many requests from this IP, please try again later.",
@@ -24,10 +24,10 @@ const limiter = rateLimit({
 
 const app = express();
 
-app.get("/", (_, res: Response) => {
+app.get("/", (_: Request, res: Response) => {
   res.redirect("/status");
 });
-app.get("/favicon.ico", (_, res: Response) => {
+app.get("/favicon.ico", (_: Request, res: Response) => {
   res.sendFile(path.join(process.cwd(), "public", "favicon.ico"));
 });
 
@@ -43,7 +43,7 @@ app.use(
 
 app.use("/api", limiter);
 
-app.use("/status", (_, res) => {
+app.use("/status", (_: Request, res) => {
   res.status(200).json({
     status: "ok",
     timestamp: new Date().toLocaleString("en-IN", {
