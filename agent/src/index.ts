@@ -2,7 +2,6 @@ import rateLimit from "express-rate-limit";
 import express from "express";
 import LCELRouter from "./routes/search_lcel.js";
 import cors from "cors";
-import favicon from "serve-favicon";
 import path from "path";
 import { RequestHandler } from "express";
 
@@ -24,8 +23,12 @@ const limiter = rateLimit({
   },
 });
 
-// 🛜 Initializing the Server
 const app = express();
+
+app.get("/favicon.ico", (req, res) => {
+  res.sendFile(path.join(process.cwd(), "public", "favicon.ico"));
+});
+
 // app.enable("trust proxy");
 app.use(
   cors({
@@ -34,12 +37,6 @@ app.use(
     allowedHeaders: ["Content-Type"],
     credentials: false,
   }),
-);
-
-app.use(
-  favicon(
-    path.join(path.dirname(""), "public", "favicon.ico"),
-  ) as RequestHandler,
 );
 
 app.use("/api", limiter);
