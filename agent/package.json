@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "npx tsc --noEmit && tsx watch src/index.ts",
-    "build": "tsup src/index.ts",
-    "vercel-build": "tsup src/index.ts",
+    "build": "tsup src/index.ts --format esm --clean --minify",
+    "vercel-build": "yarn build",
     "start": "node dist/index.js"
   },
   "keywords": [],
