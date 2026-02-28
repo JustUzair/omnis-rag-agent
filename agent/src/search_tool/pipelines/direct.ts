@@ -1,6 +1,6 @@
 import { RunnableLambda, RunnableSequence } from "@langchain/core/runnables";
-import { AgentMode, Candidate } from "../types";
-import { makeModel } from "../../shared/models";
+import { AgentMode, Candidate } from "../types.js";
+import { makeModel } from "../../shared/models.js";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 
 export const directPath = RunnableLambda.from(

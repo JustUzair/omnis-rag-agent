@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
-import { SearchInputSchema } from "../utils/schema";
-import { runSearch } from "../search_tool";
+import { SearchInputSchema } from "../utils/schema.js";
+import { runSearch } from "../search_tool/index.js";
 
 export default {
   handleSearch: async (req: Request, res: Response) => {

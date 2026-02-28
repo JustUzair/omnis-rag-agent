@@ -1,9 +1,9 @@
 import { RunnableLambda, RunnableSequence } from "@langchain/core/runnables";
-import { AgentMode, Candidate } from "../types";
-import { webSearch } from "../../utils/webSearch";
-import { openUrl } from "../../utils/openUrl";
-import { summarize } from "../../utils/summarize";
-import { makeModel } from "../../shared/models";
+import { AgentMode, Candidate } from "../types.js";
+import { webSearch } from "../../utils/webSearch.js";
+import { openUrl } from "../../utils/openUrl.js";
+import { summarize } from "../../utils/summarize.js";
+import { makeModel } from "../../shared/models.js";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 
 const TOP_N_RESULTS = 5;

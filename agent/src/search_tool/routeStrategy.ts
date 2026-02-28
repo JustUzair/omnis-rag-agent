@@ -1,6 +1,6 @@
 import { RunnableLambda } from "@langchain/core/runnables";
-import { AgentMode } from "./types";
-import { SearchInputSchema } from "../utils/schema";
+import { AgentMode } from "./types.js";
+import { SearchInputSchema } from "../utils/schema.js";
 
 export function routeStrategy(query: string): AgentMode {
   const trimmedQuery = query.toLowerCase().trim();

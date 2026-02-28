@@ -3,7 +3,6 @@ import express from "express";
 import LCELRouter from "./routes/search_lcel.js";
 import cors from "cors";
 import path from "path";
-import { RequestHandler } from "express";
 
 const limiter = rateLimit({
   limit: 10,

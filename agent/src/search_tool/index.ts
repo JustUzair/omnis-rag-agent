@@ -1,10 +1,10 @@
 import { RunnableBranch, RunnableSequence } from "@langchain/core/runnables";
-import { AgentMode } from "./types";
-import { directPath as directPipeline } from "./pipelines/direct";
-import { webPipeline } from "./pipelines/web";
-import { routeStep } from "./routeStrategy";
-import { finalValidateAndPolish } from "./validate";
-import { SearchInput } from "../utils/schema";
+import { AgentMode } from "./types.js";
+import { directPath as directPipeline } from "./pipelines/direct.js";
+import { webPipeline } from "./pipelines/web.js";
+import { routeStep } from "./routeStrategy.js";
+import { finalValidateAndPolish } from "./validate.js";
+import { SearchInput } from "../utils/schema.js";
 
 const branch = RunnableBranch.from<
   {

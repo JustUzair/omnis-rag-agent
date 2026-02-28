@@ -1,7 +1,7 @@
 import { RunnableLambda } from "@langchain/core/runnables";
-import { Candidate } from "./types";
-import { SearchAnswer, SearchAnswerSchema } from "../utils/schema";
-import { makeModel } from "../shared/models";
+import { Candidate } from "./types.js";
+import { SearchAnswer, SearchAnswerSchema } from "../utils/schema.js";
+import { makeModel } from "../shared/models.js";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 
 export const finalValidateAndPolish = RunnableLambda.from(
