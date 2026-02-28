@@ -5,7 +5,7 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "npx tsc --noEmit && tsx watch src/index.ts",
     "build": "tsup src/index.ts",
     "vercel-build": "tsup src/index.ts",
     "start": "node dist/index.js"
