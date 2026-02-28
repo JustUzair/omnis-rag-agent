@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import { rateLimit } from "express-rate-limit";
 import express, { Request, Response } from "express";
 import LCELRouter from "./routes/search_lcel.js";
 import cors from "cors";
