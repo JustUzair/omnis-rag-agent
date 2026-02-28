@@ -4,6 +4,7 @@ import LCELRouter from "./routes/search_lcel.js";
 import cors from "cors";
 import favicon from "serve-favicon";
 import path from "path";
+import { RequestHandler } from "express";
 
 const limiter = rateLimit({
   limit: 10,
@@ -35,7 +36,11 @@ app.use(
   }),
 );
 
-app.use(favicon(path.join(path.dirname(""), "public", "favicon.ico")));
+app.use(
+  favicon(
+    path.join(path.dirname(""), "public", "favicon.ico"),
+  ) as RequestHandler,
+);
 
 app.use("/api", limiter);
 
