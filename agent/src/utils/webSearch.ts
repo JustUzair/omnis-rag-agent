@@ -16,7 +16,7 @@ async function searchTavilyUtil(query: string): Promise<WebSearchResults> {
   if (!env.TAVILY_API_KEY) {
     throw new Error("Tavily API key is missing!!!");
   }
-
+  query = query.length < 400 ? query : query.slice(0, 400);
   const response = await fetch(`https://api.tavily.com/search`, {
     method: "POST",
     headers: {
@@ -34,8 +34,9 @@ async function searchTavilyUtil(query: string): Promise<WebSearchResults> {
 
   if (!response.ok) {
     const text = await safeText(response);
+    console.error(JSON.stringify(text, null, 4) as any);
     throw new Error(
-      `Tavily error: ${response.status} ${response.statusText} - ${text}`,
+      `Tavily error: ${response.status} ${response.statusText}\n${(text as any).detail.error as string}`,
     );
   }
   const data = await response.json();
