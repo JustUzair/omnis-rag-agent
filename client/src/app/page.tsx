@@ -285,7 +285,7 @@ function GlitchText({ text }: { text: string }) {
 // ── ClearHistoryButton ─────────────────────────────────────────────────────
 function ClearHistoryButton({ onClear }: { onClear: () => void }) {
   const [confirm, setConfirm] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const handleClick = () => {
     if (confirm) {
@@ -297,7 +297,12 @@ function ClearHistoryButton({ onClear }: { onClear: () => void }) {
     }
   };
 
-  useEffect(() => () => clearTimeout(timerRef.current), []);
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    [],
+  );
 
   return (
     <motion.button
