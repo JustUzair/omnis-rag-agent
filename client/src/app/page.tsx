@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, FormEvent, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   motion,
   AnimatePresence,
@@ -17,18 +17,22 @@ import {
   Binary,
   Globe2,
   Newspaper,
+  AlertTriangle,
+  Trash2,
+  RotateCcw,
 } from "lucide-react";
 import Link from "next/link";
 import Footer from "@/components/ui/footer";
 import { ChatTurn } from "@/lib/types";
 import Header from "@/components/ui/header";
 
-// --- Updated Suggestion Logic ---
+// ── Constants ──────────────────────────────────────────────────────────────
+const CHAT_STORAGE_KEY = "omnis_chat_history";
+
 const getDynamicQuery = (label: string) => {
   const now = new Date();
   const month = now.toLocaleString("default", { month: "long" });
   const year = now.getFullYear();
-
   const queries: Record<string, string> = {
     "Quantum Computing": `Latest breakthroughs in Quantum Computing as of ${month} ${year}`,
     "Global News": `Top 5 significant global news stories for ${month} ${year}`,
@@ -58,14 +62,360 @@ const SUGGESTIONS = [
     category: "SCIENCE",
   },
 ];
+
 const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ01#@!%";
 
+// ── Error parsing ──────────────────────────────────────────────────────────
+function parseErrorContent(raw: string): { code?: string; message: string } {
+  // Try to extract status code like "400 Bad Request" or "Tavily error: 404 ..."
+  const codeMatch = raw.match(/\b(\d{3})\b/);
+  const code = codeMatch?.[1];
+  // Clean message: strip leading "error:" labels for display
+  const message = raw.replace(/^(tavily\s+)?error:\s*/i, "").trim();
+  return { code, message };
+}
+
+// ── ErrorBlock ─────────────────────────────────────────────────────────────
+function ErrorBlock({ content }: { content: string }) {
+  const { code, message } = parseErrorContent(content);
+
+  // Glitch offset animation values
+  const glitchLines = Array.from({ length: 6 });
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14, filter: "blur(10px)" }}
+      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className="relative overflow-hidden"
+      style={{
+        border: "1px solid rgba(220,38,38,0.3)",
+        background: "rgba(220,38,38,0.03)",
+      }}
+    >
+      {/* Animated scan line */}
+      <motion.div
+        animate={{ y: ["-100%", "200%"] }}
+        transition={{
+          duration: 2.2,
+          repeat: Infinity,
+          ease: "linear",
+          repeatDelay: 1.8,
+        }}
+        className="absolute inset-x-0 h-px pointer-events-none z-10"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(220,38,38,0.6), transparent)",
+        }}
+      />
+
+      {/* Corner brackets — TL */}
+      <div
+        className="absolute top-0 left-0 w-4 h-4 pointer-events-none"
+        style={{
+          borderTop: "1px solid rgba(220,38,38,0.7)",
+          borderLeft: "1px solid rgba(220,38,38,0.7)",
+        }}
+      />
+      {/* TR */}
+      <div
+        className="absolute top-0 right-0 w-4 h-4 pointer-events-none"
+        style={{
+          borderTop: "1px solid rgba(220,38,38,0.7)",
+          borderRight: "1px solid rgba(220,38,38,0.7)",
+        }}
+      />
+      {/* BL */}
+      <div
+        className="absolute bottom-0 left-0 w-4 h-4 pointer-events-none"
+        style={{
+          borderBottom: "1px solid rgba(220,38,38,0.7)",
+          borderLeft: "1px solid rgba(220,38,38,0.7)",
+        }}
+      />
+      {/* BR */}
+      <div
+        className="absolute bottom-0 right-0 w-4 h-4 pointer-events-none"
+        style={{
+          borderBottom: "1px solid rgba(220,38,38,0.7)",
+          borderRight: "1px solid rgba(220,38,38,0.7)",
+        }}
+      />
+
+      {/* Header row */}
+      <div
+        className="flex items-center gap-3 px-5 pt-5 pb-3"
+        style={{ borderBottom: "1px solid rgba(220,38,38,0.12)" }}
+      >
+        {/* Pulsing alert icon */}
+        <motion.div
+          animate={{ opacity: [1, 0.3, 1], scale: [1, 0.9, 1] }}
+          transition={{ duration: 0.9, repeat: Infinity }}
+        >
+          <AlertTriangle size={14} className="text-red-500" />
+        </motion.div>
+
+        {/* SYSTEM_ALERT label with glitch */}
+        <GlitchText text="[ SYSTEM_ALERT ]" />
+
+        {/* Status code badge */}
+        {code && (
+          <motion.span
+            initial={{ opacity: 0, x: 8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.25 }}
+            className="ml-auto text-[9px] font-black tabular-nums px-2 py-0.5"
+            style={{
+              background: "rgba(220,38,38,0.15)",
+              border: "1px solid rgba(220,38,38,0.35)",
+              color: "rgba(252,165,165,0.9)",
+              letterSpacing: "0.15em",
+            }}
+          >
+            ERR_{code}
+          </motion.span>
+        )}
+      </div>
+
+      {/* Message body */}
+      <div className="px-5 py-4 relative">
+        {/* Ghost glitch lines behind text */}
+        {glitchLines.map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute left-5 right-5 h-px pointer-events-none"
+            style={{
+              top: `${20 + i * 14}%`,
+              background: "rgba(220,38,38,0.04)",
+            }}
+            animate={{ scaleX: [1, 0.6, 1], opacity: [0.4, 0, 0.4] }}
+            transition={{
+              duration: 3 + i * 0.4,
+              repeat: Infinity,
+              delay: i * 0.3,
+            }}
+          />
+        ))}
+
+        <RevealWords
+          text={message}
+          className="text-base md:text-lg font-medium leading-relaxed"
+          style={{ color: "rgba(252,165,165,0.85)" }}
+        />
+      </div>
+
+      {/* Bottom status strip */}
+      <motion.div
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ delay: 0.4, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        className="origin-left h-[2px]"
+        style={{
+          background:
+            "linear-gradient(90deg, rgba(220,38,38,0.7), rgba(220,38,38,0.1), transparent)",
+        }}
+      />
+    </motion.div>
+  );
+}
+
+// ── GlitchText ─────────────────────────────────────────────────────────────
+function GlitchText({ text }: { text: string }) {
+  const [glitching, setGlitching] = useState(false);
+
+  useEffect(() => {
+    // Randomly trigger micro-glitch
+    const t = setInterval(
+      () => {
+        setGlitching(true);
+        setTimeout(() => setGlitching(false), 120);
+      },
+      3200 + Math.random() * 2000,
+    );
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <span className="relative inline-block">
+      {/* Base */}
+      <span
+        className="text-[10px] font-black uppercase tracking-[0.3em] text-red-500"
+        style={{ textShadow: "0 0 18px rgba(220,38,38,0.6)" }}
+      >
+        {text}
+      </span>
+      {/* Glitch layer R */}
+      <AnimatePresence>
+        {glitching && (
+          <motion.span
+            key="gr"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.7, x: 2, skewX: 4 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.06 }}
+            className="absolute inset-0 text-[10px] font-black uppercase tracking-[0.3em]"
+            style={{ color: "rgba(239,68,68,0.7)", mixBlendMode: "screen" }}
+            aria-hidden
+          >
+            {text}
+          </motion.span>
+        )}
+      </AnimatePresence>
+      {/* Glitch layer B */}
+      <AnimatePresence>
+        {glitching && (
+          <motion.span
+            key="gb"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.5, x: -2, skewX: -3 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.06, delay: 0.03 }}
+            className="absolute inset-0 text-[10px] font-black uppercase tracking-[0.3em]"
+            style={{ color: "rgba(167,20,20,0.5)", mixBlendMode: "screen" }}
+            aria-hidden
+          >
+            {text}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </span>
+  );
+}
+
+// ── ClearHistoryButton ─────────────────────────────────────────────────────
+function ClearHistoryButton({ onClear }: { onClear: () => void }) {
+  const [confirm, setConfirm] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleClick = () => {
+    if (confirm) {
+      onClear();
+      setConfirm(false);
+    } else {
+      setConfirm(true);
+      timerRef.current = setTimeout(() => setConfirm(false), 3000);
+    }
+  };
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  return (
+    <motion.button
+      onClick={handleClick}
+      whileHover={{ scale: 1.04 }}
+      whileTap={{ scale: 0.96 }}
+      className={`group relative flex items-center gap-2 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.35em] transition-all duration-200
+        ${confirm ? "border border-orange-400 bg-orange-300/20 text-white" : "border border-[#ffffff10] bg-orange-600"} `}
+      //   style={{
+      //     border: confirm
+      //       ? "1px solid rgba(220,38,38,0.5)"
+      //       : "1px solid rgba(255,255,255,0.6)",
+      //     background: confirm ? "rgba(220,38,38,0.08)" : "transparent",
+      //     color: confirm ? "rgba(252,165,165,0.9)" : "rgba(82,82,91,0.9)",
+      //   }}
+      title="Clear chat history"
+    >
+      <AnimatePresence mode="wait">
+        {confirm ? (
+          <motion.span
+            key="confirm"
+            initial={{ opacity: 0, x: -4 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 4 }}
+            className="flex items-center gap-1.5 "
+          >
+            <motion.div
+              animate={{ rotate: [0, -15, 15, 0] }}
+              transition={{ duration: 0.4, repeat: Infinity }}
+            >
+              <AlertTriangle size={10} />
+            </motion.div>
+            Confirm clear?
+          </motion.span>
+        ) : (
+          <motion.span
+            key="idle"
+            initial={{ opacity: 0, x: 4 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -4 }}
+            className="flex items-center gap-1.5 "
+          >
+            <Trash2
+              size={10}
+              className="group-hover:text-red-500 transition-colors"
+            />
+            Clear history
+          </motion.span>
+        )}
+      </AnimatePresence>
+
+      {/* Progress bar for auto-cancel */}
+      <AnimatePresence>
+        {confirm && (
+          <motion.div
+            key="bar"
+            initial={{ scaleX: 1 }}
+            animate={{ scaleX: 0 }}
+            transition={{ duration: 3, ease: "linear" }}
+            className="absolute bottom-0 left-0 right-0 h-0.5 origin-left z-10 bg-orange-500"
+          />
+        )}
+      </AnimatePresence>
+    </motion.button>
+  );
+}
+
+// ── Home ───────────────────────────────────────────────────────────────────
 export default function Home() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [chat, setChat] = useState<ChatTurn[]>([]);
+  const [hydrated, setHydrated] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
+
+  // ── Hydrate from localStorage ──
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(CHAT_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as ChatTurn[];
+        if (Array.isArray(parsed) && parsed.length > 0) setChat(parsed);
+      }
+    } catch {
+      // corrupt storage — ignore
+    }
+    setHydrated(true);
+  }, []);
+
+  // ── Persist to localStorage whenever chat changes ──
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      if (chat.length === 0) {
+        localStorage.removeItem(CHAT_STORAGE_KEY);
+      } else {
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chat));
+      }
+    } catch {
+      // storage full / blocked — ignore
+    }
+  }, [chat, hydrated]);
+
+  // ── Auto-scroll to bottom on new messages ──
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [chat, loading]);
+
+  const clearHistory = useCallback(() => {
+    setChat([]);
+    localStorage.removeItem(CHAT_STORAGE_KEY);
+  }, []);
 
   const onMouseMove = useCallback((e: React.MouseEvent) => {
     setMouse({ x: e.clientX, y: e.clientY });
@@ -230,7 +580,6 @@ export default function Home() {
                       onClick={() => setQuery(getDynamicQuery(item.label))}
                       className="group relative flex flex-col items-start p-7 bg-[#040404] text-left overflow-hidden cursor-pointer"
                     >
-                      {/* Hover shimmer */}
                       <div
                         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                         style={{
@@ -238,7 +587,6 @@ export default function Home() {
                             "linear-gradient(135deg, rgba(251,146,60,0.07) 0%, rgba(251,146,60,0.02) 50%, transparent 100%)",
                         }}
                       />
-                      {/* Corner accent */}
                       <div
                         className="absolute top-0 left-0 w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                         style={{
@@ -256,14 +604,8 @@ export default function Home() {
                           stiffness: 200,
                         }}
                         className="text-orange-700 group-hover:text-orange-500 transition-colors duration-300 mb-5"
-                        style={{
-                          filter: "drop-shadow(0 0 6px rgba(251,146,60,0))",
-                          transition: "all 0.3s",
-                        }}
                       >
-                        <span className="group-hover:filter-[drop-shadow(0_0_8px_rgba(251,146,60,0.5))] transition-all duration-300">
-                          {item.icon}
-                        </span>
+                        {item.icon}
                       </motion.div>
 
                       <span className="block text-[8px] uppercase tracking-[0.45em] text-zinc-700 group-hover:text-orange-600/60 transition-colors mb-2 font-bold">
@@ -315,6 +657,32 @@ export default function Home() {
                 animate={{ opacity: 1 }}
                 className="space-y-20"
               >
+                {/* ── Clear history bar ── */}
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="flex items-center justify-between pb-4"
+                  style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                >
+                  <div className="flex items-center gap-2">
+                    <motion.div
+                      animate={{ opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 2.5, repeat: Infinity }}
+                      className="w-1.5 h-1.5 rounded-full bg-orange-600"
+                      style={{ boxShadow: "0 0 6px rgba(234,88,12,0.6)" }}
+                    />
+                    <span className="text-[8px] uppercase tracking-[0.4em] text-zinc-700 font-bold">
+                      {chat.filter(t => t.role === "user").length} session
+                      {chat.filter(t => t.role === "user").length !== 1
+                        ? "s"
+                        : ""}{" "}
+                      · stored locally
+                    </span>
+                  </div>
+                  <ClearHistoryButton onClear={clearHistory} />
+                </motion.div>
+
                 {chat.map((turn, idx) => (
                   <motion.div
                     key={idx}
@@ -328,7 +696,7 @@ export default function Home() {
                           Input
                         </span>
                         <div
-                          className="text-2xl md:text-3xl font-black tracking-tight leading-tight text-zinc-500 pl-5"
+                          className="text-xl md:text-2xl font-black tracking-tight leading-tight text-zinc-500 pl-5"
                           style={{
                             borderLeft: "2px solid rgba(255,255,255,0.06)",
                           }}
@@ -364,18 +732,32 @@ export default function Home() {
                           )}
                         </div>
 
-                        <div
-                          className="text-lg md:text-xl leading-[1.85] text-zinc-200 font-medium pl-5 py-1"
-                          style={{
-                            borderLeft: "1px solid rgba(234,88,12,0.25)",
-                          }}
-                        >
-                          {idx === chat.length - 1 ? (
-                            <RevealWords text={turn.content} />
+                        {/* ── Content or ErrorBlock ── */}
+                        {idx === chat.length - 1 ? (
+                          turn.content.toLowerCase().includes("error") ? (
+                            <ErrorBlock content={turn.content} />
                           ) : (
-                            turn.content
-                          )}
-                        </div>
+                            <div
+                              className="text-lg md:text-xl whitespace-pre-wrap leading-[1.85] text-zinc-200 font-medium pl-5 py-1"
+                              style={{
+                                borderLeft: "1px solid rgba(234,88,12,0.25)",
+                              }}
+                            >
+                              <RevealWords text={turn.content} />
+                            </div>
+                          )
+                        ) : turn.content.toLowerCase().includes("error") ? (
+                          <ErrorBlock content={turn.content} />
+                        ) : (
+                          <div
+                            className="text-lg md:text-xl whitespace-pre-wrap leading-[1.85] text-zinc-200 font-medium pl-5 py-1"
+                            style={{
+                              borderLeft: "1px solid rgba(234,88,12,0.25)",
+                            }}
+                          >
+                            {turn.content}
+                          </div>
+                        )}
 
                         {turn.sources && turn.sources.length > 0 && (
                           <motion.div
@@ -482,6 +864,7 @@ export default function Home() {
           </AnimatePresence>
         </div>
       </main>
+
       <Footer
         queryState={{ query, setQuery }}
         chatState={{ chat, setChat }}
@@ -491,6 +874,7 @@ export default function Home() {
   );
 }
 
+// ── ScrambleText ────────────────────────────────────────────────────────────
 function ScrambleText({ text }: { text: string }) {
   const [display, setDisplay] = useState(text);
   useEffect(() => {
@@ -516,15 +900,18 @@ function ScrambleText({ text }: { text: string }) {
   return <span>{display}</span>;
 }
 
+// ── RevealWords ─────────────────────────────────────────────────────────────
 function RevealWords({
   text,
   className,
+  style,
 }: {
   text: string;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   return (
-    <span className={className}>
+    <span className={className} style={style}>
       {text.split(" ").map((word, i) => (
         <motion.span
           key={i}
@@ -544,6 +931,7 @@ function RevealWords({
   );
 }
 
+// ── TiltCard ────────────────────────────────────────────────────────────────
 function TiltCard({
   children,
   onClick,
